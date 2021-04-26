@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -56,7 +57,7 @@ func main() {
 		controllerPath := path.Join(dirPath, fmt.Sprintf("%s_controller.dart", name))
 		pagePath := path.Join(dirPath, fmt.Sprintf("%s_page.dart", name))
 
-		nameUpper := strFirstToUpper(name)
+		nameCamel := camelName(name)
 
 		bindingStr := []byte(fmt.Sprintf(
 			`import 'package:get/get.dart';
@@ -68,14 +69,14 @@ class %sBinding implements Bindings {
     Get.lazyPut<%sController>(() => %sController());
   }
 }
-		`, name, nameUpper, nameUpper, nameUpper))
+		`, name, nameCamel, nameCamel, nameCamel))
 		ioutil.WriteFile(bindingPath, bindingStr, 0644)
 
 		controllerStr := []byte(fmt.Sprintf(
 			`import 'package:get/get.dart';
 
 class %sController extends GetxController {}
-`, nameUpper))
+`, nameCamel))
 		ioutil.WriteFile(controllerPath, controllerStr, 0644)
 
 		pageStr := []byte(fmt.Sprintf(
@@ -89,7 +90,7 @@ class %sPage extends GetView<%sController> {
     return Container();
   }
 }
-		`, name, nameUpper, nameUpper))
+		`, name, nameCamel, nameCamel))
 		ioutil.WriteFile(pagePath, pageStr, 0644)
 	} else {
 		exitOnErrorWriteHelp("Nothing to do...")
@@ -105,15 +106,10 @@ func dirExists(name string) bool {
 	return false
 }
 
-func strFirstToUpper(str string) string {
-	if len(str) < 1 {
-		return ""
-	}
-	strArry := []rune(str)
-	if strArry[0] >= 97 && strArry[0] <= 122 {
-		strArry[0] -= 32
-	}
-	return string(strArry)
+func camelName(name string) string {
+	name = strings.Replace(name, "_", " ", -1)
+	name = strings.Title(name)
+	return strings.Replace(name, " ", "", -1)
 }
 
 func exitOnError(msg string) {
