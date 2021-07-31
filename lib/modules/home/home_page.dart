@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'search_controller.dart';
+import 'home_controller.dart';
 import 'package:get/get.dart';
 
-class SearchPage extends GetView<SearchController> {
+class HomePage extends GetView<HomeController> {
 	@override
 	Widget build(Object context) {
 		return Container();

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"unicode"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -32,6 +33,8 @@ type Options struct {
 	Model   string `short:"m" long:"model" description:"generate model" default:"module" choice:"module" choice:"jsonModel"`
 	Output  string `short:"o" long:"output" description:"output path (default: moudle:lib/modules jsonModel:lib/models)"`
 	Version bool   `short:"v" long:"version" description:"print current version"`
+	Route   string `short:"r" long:"route" description:"the route path to write" default:"lib/routes/app_routes.dart"`
+	Page    string `short:"p" long:"page" description:"the page path to write" default:"lib/routes/app_pages.dart"`
 }
 
 func init() {
@@ -59,6 +62,8 @@ func main() {
 		name = args[0]
 		if options.Model == Moudle {
 			generateModule()
+			generatePage()
+			generateRoute()
 		} else if options.Model == JsonModel {
 			generateJsonModel()
 		}
@@ -124,6 +129,50 @@ class %sPage extends GetView<%sController> {
 	ioutil.WriteFile(pagePath, pageStr, 0644)
 }
 
+func generateRoute() {
+	routePath := options.Route
+	if !fileExists(routePath) {
+		exitOnError(fmt.Sprintf("%v not exist", routePath))
+	}
+
+	routeByte, err := ioutil.ReadFile(routePath)
+	if err != nil {
+		exitOnError(err.Error())
+	}
+
+	nameCamel := lowerCamelName(name)
+	routeInsertStr := fmt.Sprintf("\n  static const %v = '/%v';", nameCamel, nameCamel)
+	routeStr := string(routeByte)
+	routeIndex := strings.LastIndex(routeStr, ";")
+	routeByte = []byte(fmt.Sprintf("%v%v%v", routeStr[:routeIndex+1], routeInsertStr, routeStr[routeIndex+1:]))
+	ioutil.WriteFile(routePath, routeByte, 0644)
+}
+
+func generatePage() {
+	pagePath := options.Page
+	if !fileExists(pagePath) {
+		exitOnError(fmt.Sprintf("%v not exist", pagePath))
+	}
+
+	pageByte, err := ioutil.ReadFile(pagePath)
+	if err != nil {
+		exitOnError(err.Error())
+	}
+
+	nameCamel := camelName(name)
+	lowerNameCamel := lowerCamelName(name)
+	pageInsertStr := fmt.Sprintf(`
+    GetPage(
+      name: Routes.%v,
+      page: () => %vPage(),
+      binding: %vBinding(),
+    ),`, lowerNameCamel, nameCamel, nameCamel)
+	pageStr := string(pageByte)
+	pageIndex := strings.LastIndex(pageStr, ",")
+	pageByte = []byte(fmt.Sprintf("%v%v%v", pageStr[:pageIndex+1], pageInsertStr, pageStr[pageIndex+1:]))
+	ioutil.WriteFile(pagePath, pageByte, 0644)
+}
+
 func generateJsonModel() {
 	outPath := options.Output
 	if len(outPath) == 0 {
@@ -174,9 +223,14 @@ func dirExists(name string) bool {
 }
 
 func camelName(name string) string {
-	name = strings.Replace(name, "_", " ", -1)
-	name = strings.Title(name)
-	return strings.Replace(name, " ", "", -1)
+	str := strings.Replace(name, "_", " ", -1)
+	str = strings.Title(str)
+	return strings.Replace(str, " ", "", -1)
+}
+
+func lowerCamelName(name string) string {
+	str := camelName(name)
+	return string(unicode.ToLower(rune(str[0]))) + str[1:]
 }
 
 func exitOnError(msg string) {
