@@ -1,3 +1,9 @@
 import 'package:get/get.dart';
 
-class HomeController extends GetxController {}
+class HomeParam {
+}
+
+class HomeController extends GetxController {
+  	HomeParam param;
+  	HomeController({required this.param});
+}

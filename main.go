@@ -12,14 +12,15 @@ import (
 )
 
 const (
-	version              = "0.1"
+	version              = "0.1.1"
+	update               = "更新module内容"
 	cmdName              = "getx-generate"
 	defaultModulePath    = "lib/modules"
 	defaultJsonModelPath = "lib/models"
 )
 
 const (
-	Moudle    = "module"
+	Module    = "module"
 	JsonModel = "jsonModel"
 )
 
@@ -54,13 +55,13 @@ func main() {
 	}
 
 	if options.Version {
-		fmt.Printf("%s: %s\n", cmdName, version)
+		fmt.Printf("%s: %s-%s\n", cmdName, version, update)
 		os.Exit(0)
 	}
 
 	if len(args) == 1 {
 		name = args[0]
-		if options.Model == Moudle {
+		if options.Model == Module {
 			generateModule()
 			generatePage()
 			generateRoute()
@@ -96,12 +97,18 @@ func generateModule() {
 
 	bindingStr := []byte(fmt.Sprintf(
 		`import 'package:get/get.dart';
+import '../../../routes/route_model.dart';
 import '%s_controller.dart';
 
 class %sBinding implements Bindings {
 	@override
 	void dependencies() {
-		Get.lazyPut<%sController>(() => %sController());
+		RouteModel rm = Get.arguments;
+		var controller = %sController(param: rm.param);
+		Get.lazyPut<%sController>(
+		  () => controller,
+		  tag: rm.tag,
+		);
 	}
 }
 	`, name, nameCamel, nameCamel, nameCamel))
@@ -110,22 +117,35 @@ class %sBinding implements Bindings {
 	controllerStr := []byte(fmt.Sprintf(
 		`import 'package:get/get.dart';
 
-class %sController extends GetxController {}
-`, nameCamel))
+class %sParam {
+}
+
+class %sController extends GetxController {
+  	%sParam param;
+  	%sController({required this.param});
+}
+`, nameCamel, nameCamel, nameCamel, nameCamel))
 	ioutil.WriteFile(controllerPath, controllerStr, 0644)
 
 	pageStr := []byte(fmt.Sprintf(
 		`import 'package:flutter/material.dart';
 import '%s_controller.dart';
+import '../../../routes/route_model.dart';
 import 'package:get/get.dart';
 
 class %sPage extends GetView<%sController> {
 	@override
 	Widget build(Object context) {
-		return Container();
+		RouteModel rm = Get.arguments;
+		return GetBuilder<%sController>(
+		  tag: rm.tag,
+		  builder: (controller) {
+			return Container();
+		  },
+		);
 	}
 }
-	`, name, nameCamel, nameCamel))
+	`, name, nameCamel, nameCamel, nameCamel))
 	ioutil.WriteFile(pagePath, pageStr, 0644)
 }
 
